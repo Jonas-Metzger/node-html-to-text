@@ -83,6 +83,82 @@ function process (html, metadata, options, picker, findBaseElements, walk) {
 }
 
 
+/**
+ * Compile selectors into a decision tree,
+ * return a function intended for batch processing.
+ *
+ * @param   { Options } [options = {}]   HtmlToText options (defaults, formatters, user options merged, deduplicated).
+ * @returns { (doc: DomNode, metadata?: any) => string } Pre-configured converter function.
+ * @static
+ */
+function compileDoc (options = {}) {
+  const selectorsWithoutFormat = options.selectors.filter(s => !s.format);
+  if (selectorsWithoutFormat.length) {
+    throw new Error(
+      'Following selectors have no specified format: ' +
+      selectorsWithoutFormat.map(s => `\`${s.selector}\``).join(', ')
+    );
+  }
+  const picker = new DecisionTree(
+    options.selectors.map(s => [s.selector, s])
+  ).build(hp2Builder);
+
+  if (typeof options.encodeCharacters !== 'function') {
+    options.encodeCharacters = makeReplacerFromDict(options.encodeCharacters);
+  }
+
+  const baseSelectorsPicker = new DecisionTree(
+    options.baseElements.selectors.map((s, i) => [s, i + 1])
+  ).build(hp2Builder);
+  function findBaseElements (dom) {
+    return findBases(dom, options, baseSelectorsPicker);
+  }
+
+  const limitedWalk = limitedDepthRecursive(
+    options.limits.maxDepth,
+    recursiveWalk,
+    function (dom, builder) {
+      builder.addInline(options.limits.ellipsis || '');
+    }
+  );
+
+  return function (doc, metadata = undefined) {
+    return processDoc(doc, metadata, options, picker, findBaseElements, limitedWalk);
+  };
+}
+
+
+/**
+ * Convert given document according to preprocessed options.
+ *
+ * @param { DomNode } doc document content to convert.
+ * @param { any } metadata Optional metadata for HTML document, for use in formatters.
+ * @param { Options } options HtmlToText options (preprocessed).
+ * @param { import('selderee').Picker<DomNode, TagDefinition> } picker
+ * Tag definition picker for DOM nodes processing.
+ * @param { (dom: DomNode[]) => DomNode[] } findBaseElements
+ * Function to extract elements from HTML DOM
+ * that will only be present in the output text.
+ * @param { RecursiveCallback } walk Recursive callback.
+ * @returns { string }
+ */
+function processDoc (doc, metadata, options, picker, findBaseElements, walk) {
+  const maxInputLength = options.limits.maxInputLength;
+  if (maxInputLength && html && html.length > maxInputLength) {
+    console.warn(
+      `Input length ${html.length} is above allowed limit of ${maxInputLength}. Truncating without ellipsis.`
+    );
+    html = html.substring(0, maxInputLength);
+  }
+
+  const document = parseDocument(html, { decodeEntities: options.decodeEntities });
+  const bases = findBaseElements(document.children);
+  const builder = new BlockTextBuilder(options, picker, metadata);
+  walk(bases, builder);
+  return builder.toString();
+}
+
+
 function findBases (dom, options, baseSelectorsPicker) {
   const results = [];
 
