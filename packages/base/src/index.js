@@ -144,12 +144,6 @@ function compileDoc (options = {}) {
  */
 function processDoc (doc, metadata, options, picker, findBaseElements, walk) {
   const maxInputLength = options.limits.maxInputLength;
-  if (maxInputLength && html && html.length > maxInputLength) {
-    console.warn(
-      `Input length ${html.length} is above allowed limit of ${maxInputLength}. Truncating without ellipsis.`
-    );
-    html = html.substring(0, maxInputLength);
-  }
 
   const document = parseDocument(html, { decodeEntities: options.decodeEntities });
   const bases = findBaseElements(document.children);
