@@ -144,8 +144,7 @@ function compileDoc (options = {}) {
  */
 function processDoc (doc, metadata, options, picker, findBaseElements, walk) {
   const maxInputLength = options.limits.maxInputLength;
-
-  const document = parseDocument(html, { decodeEntities: options.decodeEntities });
+  const document = doc;
   const bases = findBaseElements(document.children);
   const builder = new BlockTextBuilder(options, picker, metadata);
   walk(bases, builder);
