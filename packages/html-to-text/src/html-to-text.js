@@ -1,5 +1,6 @@
 
 import { compile as compile_ } from '@html-to-text/base';
+import { compileDoc as compileDoc_ } from '@html-to-text/base';
 import * as genericFormatters from '@html-to-text/base/src/generic-formatters';
 import { get, mergeDuplicatesPreferLast } from '@html-to-text/base/src/util';
 import merge from 'deepmerge'; // default
@@ -149,6 +150,31 @@ function compile (options = {}) {
 }
 
 /**
+ * Preprocess options, compile selectors into a decision tree,
+ * return a function intended for batch processing.
+ *
+ * @param   { Options } [options = {}]   HtmlToText options.
+ * @returns { (doc: DomNode, metadata?: any) => string } Pre-configured converter function.
+ * @static
+ */
+function compileDoc (options = {}) {
+  options = merge(
+    DEFAULT_OPTIONS,
+    options,
+    {
+      arrayMerge: overwriteMerge,
+      customMerge: (key) => ((key === 'selectors') ? selectorsMerge : undefined)
+    }
+  );
+  options.formatters = Object.assign({}, genericFormatters, textFormatters, options.formatters);
+  options.selectors = mergeDuplicatesPreferLast(options.selectors, (s => s.selector));
+
+  handleDeprecatedOptions(options);
+
+  return compileDoc_(options);
+}
+
+/**
  * Convert given HTML content to plain text string.
  *
  * @param   { string }  html           HTML content to convert.
@@ -217,6 +243,7 @@ function handleDeprecatedOptions (options) {
 
 export {
   compile,
+  compileDoc,
   convert,
   convert as htmlToText
 };
