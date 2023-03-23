@@ -265,4 +265,4 @@ function makeReplacerFromDict (dict) {
 }
 
 
-export { compile };
+export { compile, compileDoc };
