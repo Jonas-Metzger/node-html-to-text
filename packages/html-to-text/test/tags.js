@@ -869,6 +869,23 @@ describe('tags', function () {
       expect(htmlToText(html, options)).to.equal(expected);
     });
 
+    it('should not miss content in tables with variable number of cells per row', function () {
+      const html = `
+      <table>
+      <tr><td>a</td></tr>
+      <tr><td>b</td><td>c</td></tr>
+      <tr></tr>
+      <tr><td>d</td></tr>
+      </table>`;
+      const expected = 'a\nb   c\n\nd';
+      const options = {
+        selectors: [
+          { selector: 'table', format: 'dataTable' }
+        ]
+      };
+      expect(htmlToText(html, options)).to.equal(expected);
+    });
+
   });
 
   describe('custom formatting', function () {
@@ -1018,6 +1035,18 @@ describe('tags', function () {
           { selector: 'hr.baz', format: 'horizontalLine', options: { length: 3 } },
           { selector: 'hr.bar', format: 'horizontalLine', options: { length: 5 } },
           { selector: 'hr.foo' }
+        ]
+      };
+      expect(htmlToText(html, options)).to.equal(expected);
+    });
+
+    it('should allow escape sequences in selectors', function () {
+      const html = '<hr id="sceneI_3.1"/><hr class="---"/>';
+      const expected = '---[ cut ]---\n\n---[ cut ]---';
+      const options = {
+        selectors: [
+          { selector: '#sceneI_3\\.1', format: 'blockString', options: { string: '---[ cut ]---' } },
+          { selector: '.\\2d -\\-', format: 'blockString', options: { string: '---[ cut ]---' } }
         ]
       };
       expect(htmlToText(html, options)).to.equal(expected);
